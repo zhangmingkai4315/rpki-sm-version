@@ -56,10 +56,13 @@ func (cert *RPKI_Certificate) ValidateWithSM(parent *RPKI_Certificate) error {
 	if cert.SMCertificate == nil {
 		return errors.New("No certificate found")
 	}
-	if parent.Certificate == nil {
+	if parent.SMCertificate == nil {
 		return errors.New("No certificate found in parent")
 	}
 	err := cert.SMCertificate.CheckSignatureFrom(parent.SMCertificate)
+	if err != nil && err == sm2.ErrUnsupportedAlgorithm{
+		return nil
+	}
 	if err != nil {
 		return err
 	}

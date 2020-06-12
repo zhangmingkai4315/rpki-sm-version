@@ -2,6 +2,7 @@ package librpki
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"encoding/asn1"
 	"encoding/hex"
 	"errors"
@@ -320,15 +321,61 @@ func EncryptSignatureSM2(rand io.Reader, signature []byte, privKey *sm2.PrivateK
 }
 
 
-//func DecryptSignatureSM2(signature []byte, pubKey *sm2.PublicKey, msg []byte) (error) {
-//
-//	if pubKey.Verify(msg, signature) ==
-//	dataDecrypted := SM2_public_decrypt(pubKey, signature)
-//	var signDec SignatureDecoded
-//	_, err := asn1.Unmarshal(dataDecrypted, &signDec)
-//	if err != nil {
-//		return nil, err
-//	}
-//	return signDec.Hash, nil
-//}
 
+// Won't validate if signedattributes is empty
+func (cms *CMS) ValidateSM(encap []byte, cert *sm2.Certificate) error {
+	signedAttributes := cms.SignedData.SignerInfos[0].SignedAttrs
+
+	var messageDigest []byte
+	for _, sAttr := range signedAttributes {
+		if sAttr.AttrType.Equal(MessageDigest) && len(sAttr.AttrValue) == 1 {
+			messageDigest = sAttr.AttrValue[0].Bytes
+		}
+	}
+
+	h := sm3.New()
+	h.Write(encap)
+	contentHash := h.Sum(nil)
+	if !bytes.Equal(contentHash, messageDigest) {
+		return errors.New(fmt.Sprintf("CMS digest (%x) and encapsulated digest (%x) are different", contentHash, messageDigest))
+	}
+
+	var sad SignedAttributesDigest
+	sad.SignedAttrs = signedAttributes
+	b, err := asn1.Marshal(sad)
+	if err != nil {
+		return err
+	}
+	h = sm3.New()
+	if len(b) < 2 {
+		return errors.New("Error with length of signed attributes")
+	}
+	h.Write(b[2:]) // removes the "sequence"
+	signedAttributesHash := h.Sum(nil)
+
+	// Check for public key format (ECDSA?)
+	signDec := SignatureDecoded{
+		Inner: SignatureInner{
+			OID:  SM3OID,
+			Null: asn1.NullRawValue,
+		},
+		Hash: signedAttributesHash,
+	}
+	signEnc, err := asn1.Marshal(signDec)
+
+	pubKey, ok := cert.PublicKey.(*ecdsa.PublicKey)
+	if !ok {
+		return errors.New("Public key is not ECDSA")
+	}
+
+	var p sm2.PublicKey
+	p.X = pubKey.X
+	p.Y = pubKey.Y
+	p.Curve = sm2.P256Sm2()
+
+	if p.Verify(signEnc, cms.SignedData.SignerInfos[0].Signature) != true{
+		return errors.New(fmt.Sprintf("CMS encrypted digest  are different"))
+	}
+
+	return nil
+}

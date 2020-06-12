@@ -342,7 +342,7 @@ func BadFormatGroup(data []byte) ([]byte, bool, error) {
 }
 
 func (cms *CMS) GetRPKICertificate() (*RPKI_Certificate, error) {
-	rpki_cert, err := DecodeCertificate(cms.SignedData.Certificates.Bytes)
+	rpki_cert, err := DecodeCertificateSM(cms.SignedData.Certificates.Bytes)
 	if err != nil {
 		return nil, err
 	}

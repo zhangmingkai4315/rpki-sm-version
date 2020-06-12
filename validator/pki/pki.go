@@ -270,9 +270,15 @@ func (v *Validator) AddTAL(tal *librpki.RPKI_TAL) ([]*PKIFile, *Resource, error)
 
 func (v *Validator) AddCert(cert *librpki.RPKI_Certificate, trust bool) (bool, []*PKIFile, *Resource, error) {
 	pathCert := ExtractPathCert(cert)
+	var ski, aki string
+	if cert.SMCertificate == nil{
+		ski = string(cert.Certificate.SubjectKeyId)
+		aki = string(cert.Certificate.AuthorityKeyId)
+	}else{
+		ski = string(cert.SMCertificate.SubjectKeyId)
+		aki = string(cert.SMCertificate.AuthorityKeyId)
+	}
 
-	ski := string(cert.Certificate.SubjectKeyId)
-	aki := string(cert.Certificate.AuthorityKeyId)
 
 	_, exists := v.Objects[ski]
 	if exists {
@@ -393,7 +399,12 @@ func (v *Validator) ValidateCertificate(cert *librpki.RPKI_Certificate, trust bo
 }
 
 func (v *Validator) AddROA(pkifile *PKIFile, roa *librpki.RPKI_ROA) (bool, *Resource, error) {
-	valid, _, res, err := v.AddCert(roa.Certificate, false)
+
+	addCert := v.AddCertWithSM
+	if roa.Certificate.SMCertificate == nil{
+		addCert = v.AddCert
+	}
+	valid, _, res, err := addCert(roa.Certificate, false)
 	if res == nil {
 		return valid, res, errors.New(fmt.Sprintf("Resource is empty: %v", err))
 	}
@@ -416,7 +427,13 @@ func (v *Validator) AddROA(pkifile *PKIFile, roa *librpki.RPKI_ROA) (bool, *Reso
 	res_roa.File = pkifile
 	res.Childs = append(res.Childs, res_roa)
 	res_roa.Parent = res
-	key := roa.Certificate.Certificate.SubjectKeyId
+	var key []byte
+	if roa.Certificate.SMCertificate == nil{
+		key = roa.Certificate.Certificate.SubjectKeyId
+	}else{
+		key = roa.Certificate.SMCertificate.SubjectKeyId
+	}
+	//key := roa.Certificate.Certificate.SubjectKeyId
 
 	if valid {
 		v.ValidROA[string(key)] = res_roa
@@ -493,28 +510,32 @@ func (v *Validator) AddCRL(crl *pkix.CertificateList) (bool, *Resource, error) {
 		}
 	}
 	if valid {
-		err := parentCert.Certificate.CheckCRLSignature(crl)
+		var err error
+		if parentCert.SMCertificate == nil{
+			err = parentCert.Certificate.CheckCRLSignature(crl)
+		}else{
+			err = parentCert.SMCertificate.CheckCRLSignature(crl)
+		}
+
 		if err != nil {
 			valid = false
 		} else {
 			v.ValidCRL[string(aki)] = res
 			for _, revoked := range crl.TBSCertList.RevokedCertificates {
-				/*for _, child := range parent.Childs {
-					switch child := child.Resource.(type) {
-					case *librpki.RPKI_Certificate:
-						if child.Certificate.SerialNumber.Cmp(revoked.SerialNumber) == 0 {
-							err = v.InvalidateObject(child.Certificate.SubjectKeyId)
-							// Handle error?
-						}
-					}
-				}*/
 				key := string(aki) + revoked.SerialNumber.String()
 				child, found := v.CertsSerial[key]
 				if found {
 					childConv := child.Resource.(*librpki.RPKI_Certificate)
-					if childConv.Certificate.SerialNumber.Cmp(revoked.SerialNumber) == 0 {
-						v.InvalidateObject(childConv.Certificate.SubjectKeyId)
+					if childConv.SMCertificate != nil{
+						if childConv.SMCertificate.SerialNumber.Cmp(revoked.SerialNumber) == 0 {
+							v.InvalidateObject(childConv.Certificate.SubjectKeyId)
+						}
+					}else{
+						if childConv.Certificate.SerialNumber.Cmp(revoked.SerialNumber) == 0 {
+							v.InvalidateObject(childConv.Certificate.SubjectKeyId)
+						}
 					}
+
 				}
 
 				v.Revoked[key] = true

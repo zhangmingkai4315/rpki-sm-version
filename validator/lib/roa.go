@@ -269,7 +269,11 @@ func DecodeROA(data []byte) (*RPKI_ROA, error) {
 	rpki_roa.Certificate = cert
 
 	// Validate the content of the CMS
-	err = c.Validate(fullbytes, cert.Certificate)
+	if cert.Certificate != nil{
+		err = c.Validate(fullbytes, cert.Certificate)
+	}else {
+		err = c.ValidateSM(fullbytes, cert.SMCertificate)
+	}
 	if err != nil {
 		rpki_roa.InnerValidityError = err
 	} else {

@@ -1,13 +1,13 @@
 package pki
 
 import (
-	"crypto"
 	"crypto/rand"
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	librpki "github.com/cloudflare/cfrpki/validator/lib"
 	"github.com/tjfoc/gmsm/sm2"
 	"github.com/tjfoc/gmsm/sm3"
+	"log"
 	"math/big"
 	"net"
 	"testing"
@@ -28,7 +28,7 @@ func CreateSMKeys() []*sm2.PrivateKey{
 type TestManagerWithSM struct {
 	fs           *TestingFileSeeker
 	keys         []*sm2.PrivateKey
-	publicKeys   []crypto.PublicKey
+	publicKeys   []*sm2.PublicKey
 	skiPublicKey [][]byte
 
 	tal           *librpki.RPKI_TAL
@@ -118,13 +118,16 @@ func NewTestManagerWithSM() *TestManagerWithSM {
 
 	keys := CreateSMKeys()
 	fs := NewFileSeeker()
-	publicKeys := make([]crypto.PublicKey, 0)
+	publicKeys := make([]*sm2.PublicKey, 0)
 	for _, k := range keys {
-		publicKeys = append(publicKeys, k.Public())
+		publicKeys = append(publicKeys, &k.PublicKey)
 	}
 	skiPublicKey := make([][]byte, 0)
 	for _, k := range publicKeys {
-		h, _ := librpki.HashPublicKey(k)
+		h, err := librpki.HashPublicKey(k)
+		if err != nil{
+			log.Panic(err)
+		}
 		skiPublicKey = append(skiPublicKey, h)
 	}
 

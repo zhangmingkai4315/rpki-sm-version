@@ -5,6 +5,7 @@ import (
 	"encoding/asn1"
 	"github.com/tjfoc/gmsm/sm2"
 	"github.com/tjfoc/gmsm/sm3"
+	"math/big"
 )
 
 
@@ -29,17 +30,29 @@ func BundleSM2PublicKey(key *sm2.PublicKey) (asn1.BitString, error) {
 }
 
 
-// Using SM3算法制作hash值
+//func HashSMPublicKey(key sm2.PublicKey)([]byte, error){
+//	keyBytesHash, err := asn1.Marshal(key)
+//	if err != nil {
+//		return nil, err
+//	}
+//	//fmt.Printf("TESTA A %x\n", keyBytesHash)
+//	hash := sm3.New()
+//	hash.Write(keyBytesHash)
+//	hashResult := hash.Sum(nil)
+//	return hashResult[:], nil
+//}
+
+
 func HashSMPublicKey(key sm2.PublicKey)([]byte, error){
-	keyBytesHash, err := asn1.Marshal(key)
-	if err != nil {
-		return nil, err
-	}
-	//fmt.Printf("TESTA A %x\n", keyBytesHash)
+	//keyBytesHash, err := asn1.Marshal(key.X.Add(key.Y).Bytes())
+	//if err != nil {
+	//	return nil, err
+	//}
+	////fmt.Printf("TESTA A %x\n", keyBytesHash)
 	hash := sm3.New()
-	hash.Write(keyBytesHash)
+	z := big.Int{}
+	hash.Write(z.Add(key.X, key.Y).Bytes())
 	hashResult := hash.Sum(nil)
 	return hashResult[:], nil
 }
-
 

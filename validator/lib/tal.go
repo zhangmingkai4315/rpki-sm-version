@@ -103,7 +103,7 @@ func HashPublicKey(key interface{}) ([]byte, error) {
 	case sm2.PublicKey:
 		return HashSMPublicKey(keyc)
 	default:
-		return nil, errors.New("Public key is not RSA")
+		return nil, errors.New("Public key is not RSA or SM2")
 	}
 }
 

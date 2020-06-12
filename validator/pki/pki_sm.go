@@ -256,7 +256,7 @@ func (v *Validator) AddManifestWithSM(pkifile *PKIFile, mft *librpki.RPKI_Manife
 	res_mft.File = pkifile
 	res.Childs = append(res.Childs, res_mft)
 	res_mft.Parent = res
-	key := mft.Certificate.Certificate.SubjectKeyId
+	key := mft.Certificate.SMCertificate.SubjectKeyId
 	if valid {
 		v.ValidManifest[string(key)] = res_mft
 	}

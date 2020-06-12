@@ -858,6 +858,42 @@ func EncodeSIA(sias []*SIA) (*pkix.Extension, error) {
 	return ext, nil
 }
 
+func DecodeCertificateSM(data []byte) (*RPKI_Certificate, error) {
+	cert, err := sm2.ParseCertificate(data)
+
+	if err != nil {
+		fmt.Print(err)
+		return nil, err
+	}
+	rpki_cert := RPKI_Certificate{
+		SMCertificate: cert,
+	}
+	for _, extension := range cert.Extensions {
+		if extension.Id.Equal(IpAddrBlock) {
+			addresses, err := DecodeIPAddressBlock(extension.Value)
+			rpki_cert.IPAddresses = addresses
+			if err != nil {
+				return &rpki_cert, err
+			}
+		} else if extension.Id.Equal(AutonomousSysIds) {
+			asnsnum, asnsrdi, err := DecodeASN(extension.Value)
+			rpki_cert.ASNums = asnsnum
+			rpki_cert.ASNRDI = asnsrdi
+			if err != nil {
+				return &rpki_cert, err
+			}
+		} else if extension.Id.Equal(SubjectInfoAccess) {
+			sias, err := DecodeSubjectInformationAccess(extension.Value)
+			rpki_cert.SubjectInformationAccess = sias
+			if err != nil {
+				return &rpki_cert, err
+			}
+		}
+	}
+
+	return &rpki_cert, nil
+}
+
 func DecodeCertificate(data []byte) (*RPKI_Certificate, error) {
 	cert, err := x509.ParseCertificate(data)
 
