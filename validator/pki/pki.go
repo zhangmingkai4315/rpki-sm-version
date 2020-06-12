@@ -567,15 +567,26 @@ func ExtractPathCert(cert *librpki.RPKI_Certificate) []*PKIFile {
 			item.Repo = repo
 		}
 	}
-
-	for _, crl := range cert.Certificate.CRLDistributionPoints {
-		item := &PKIFile{
-			Type: TYPE_CRL,
-			Repo: repo,
-			Path: crl,
+	if cert.SMCertificate == nil{
+		for _, crl := range cert.Certificate.CRLDistributionPoints {
+			item := &PKIFile{
+				Type: TYPE_CRL,
+				Repo: repo,
+				Path: crl,
+			}
+			fileList = append(fileList, item)
 		}
-		fileList = append(fileList, item)
+	}else{
+		for _, crl := range cert.SMCertificate.CRLDistributionPoints {
+			item := &PKIFile{
+				Type: TYPE_CRL,
+				Repo: repo,
+				Path: crl,
+			}
+			fileList = append(fileList, item)
+		}
 	}
+
 
 	if add {
 		fileList = append(fileList, item)

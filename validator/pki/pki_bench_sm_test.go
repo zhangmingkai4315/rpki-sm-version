@@ -19,7 +19,7 @@ import (
 func CreateSMKeys() []*sm2.PrivateKey{
 	keys := make([]*sm2.PrivateKey, 0)
 	for i:=0;i<5 ; i++ {
-		k, _ := sm2.GenerateKey();
+		k, _ := sm2.GenerateKey()
 		keys = append(keys, k)
 	}
 	return  keys
@@ -102,7 +102,7 @@ func addROAToManifestWithSM(manager *TestManagerWithSM, cmsBytes []byte) {
 
 	encap, _ := librpki.ManifestToEncap(manifestContentEnc)
 
-	manifestCms.Sign(rand.Reader,
+	manifestCms.SignSM(rand.Reader,
 		manager.skiPublicKey[MANIFEST_KEY_INDEX_2],
 		encap, manager.keys[MANIFEST_KEY_INDEX_2], certBytesMft)
 
@@ -364,7 +364,7 @@ func NewTestManagerWithSM() *TestManagerWithSM {
 	if err != nil {
 		panic(err)
 	}
-	manifestCms.Sign(
+	manifestCms.SignSM(
 		rand.Reader, skiPublicKey[MANIFEST_KEY_INDEX_1],
 		encap, keys[MANIFEST_KEY_INDEX_1],
 		certBytesMft2)
@@ -430,7 +430,7 @@ func signROAWithSM(manager *TestManagerWithSM) ([]byte, error) {
 
 	encap, _ := librpki.ROAToEncap(roaContentEnc)
 
-	_ = roaCms.Sign(rand.Reader,
+	_ = roaCms.SignSM(rand.Reader,
 		manager.skiPublicKey[ROA_KEY_INDEX],
 		encap, manager.keys[ROA_KEY_INDEX],
 		certBytesRoa)

@@ -2,10 +2,10 @@ package librpki
 
 import (
 	"bytes"
-	"crypto/ecdsa"
 	"crypto/rsa"
 	"crypto/sha1"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/asn1"
 	"encoding/base64"
 	"errors"
@@ -124,8 +124,13 @@ func BundleRSAPublicKey(key rsa.PublicKey) (asn1.BitString, error) {
 		return asn1.BitString{}, err
 	}
 	return asn1.BitString{Bytes: keyBytes}, nil
-
 }
+
+type pkixPublicKey struct {
+	Algo      pkix.AlgorithmIdentifier
+	BitString asn1.BitString
+}
+
 
 func EncodeTALSize(tal *RPKI_TAL, split int) ([]byte, error) {
 	var bs asn1.BitString
@@ -137,11 +142,20 @@ func EncodeTALSize(tal *RPKI_TAL, split int) ([]byte, error) {
 			return nil, err
 		}
 	}else if tal.OID.Equal(SM2OID){
+		//var r pkixPublicKey
 		keyRaw := tal.PublicKey.(sm2.PublicKey)
+		//keyRaw := tal.PublicKey.(sm2.PublicKey)
 		bs, err = BundleSM2PublicKey(&keyRaw)
 		if err != nil{
 			return nil, err
 		}
+
+		//bsraw, err := sm2.MarshalSm2PublicKey(&keyRaw)
+		//_, err = asn1.Unmarshal(bsraw, r)
+		//if err != nil{
+		//	return nil,err
+		//}
+		//bs = r.BitString
 	} else {
 		return nil, errors.New("TAL does not contain a RSA or SM2 key")
 	}
@@ -250,16 +264,18 @@ func DecodeTAL(data []byte) (*RPKI_TAL, error) {
 	}else if tal.OID.Equal(SM2OID) {
 		tal.Algorithm = x509.ECDSA
 
-		var inner2 sm2.PublicKey
-		_, err = asn1.Unmarshal(inner.BS.Bytes, &inner2)
+		//var inner2 sm2.PublicKey
+		//_, err = asn1.Unmarshal(inner.BS.Bytes, &inner2)
+		inner2, err := sm2.ParseSm2PublicKey(inner.BS.Bytes)
 
-		inner, err := sm2.ParsePKIXPublicKey(inner.BS.Bytes)
+		//inner, err := sm2.ParsePKIXPublicKey(inner.BS.Bytes)
 		if err != nil {
 			return nil, err
 		}
-		if pk, ok := inner.(*ecdsa.PublicKey); ok == true{
-			tal.PublicKey = pk
-		}
+		tal.PublicKey = inner2
+		//if pk, ok := inner.(*sm2.PublicKey); ok == true{
+		//	tal.PublicKey = pk
+		//}
 	} else {
 		tal.PublicKey = inner.BS.Bytes
 	}

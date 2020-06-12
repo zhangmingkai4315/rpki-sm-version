@@ -2,16 +2,17 @@ package librpki
 
 import (
 	"bytes"
-	"crypto/ecdsa"
-
 	"encoding/asn1"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/tjfoc/gmsm/sm2"
 	"github.com/tjfoc/gmsm/sm3"
+	"io"
 	"time"
 	//"encoding/hex"
 )
+
 
 // SMOID标准定义
 // http://gmssl.org/docs/oid.html
@@ -27,15 +28,21 @@ var (
 )
 
 
-func DecryptSignatureECDSA(signature []byte, pubKey *ecdsa.PublicKey) ([]byte, error) {
-	//dataDecrypted := ECDSA_public_decrypt(pubKey, signature)
-	var signDec SignatureDecoded
-	//_, err := asn1.Unmarshal(dataDecrypted, &signDec)
-	//if err != nil {
-	//	return nil, err
-	//}
-	return signDec.Hash, nil
-}
+//func DecryptSignatureSM(signature []byte, pubKey *sm2.PublicKey) ([]byte, error) {
+//	//dataDecrypted := ECDSA_public_decrypt(pubKey, signature)
+//
+//	//pubKey．
+//	dataDecrypted, err := sm2.Encrypt(pubKey, signature)
+//	if err != nil{
+//		return  nil, err
+//	}
+//	var signDec SignatureDecoded
+//	_, err = asn1.Unmarshal(dataDecrypted, &signDec)
+//	if err != nil {
+//		return nil, err
+//	}
+//	return signDec.Hash, nil
+//}
 
 
 // EncodeCMSWithSM　支持国密码算法的版本
@@ -196,20 +203,132 @@ func (cms *CMS) ValidateWithSM(encap []byte, cert *sm2.Certificate) error {
 	h.Write(b[2:]) // removes the "sequence"
 	signedAttributesHash := h.Sum(nil)
 
+
+	signDec := SignatureDecoded{
+		Inner: SignatureInner{
+			OID:  SM3OID,
+			Null: asn1.NullRawValue,
+		},
+		Hash: signedAttributesHash,
+	}
+	signEnc, err := asn1.Marshal(signDec)
+
 	// Check for public key format (ECDSA?)
-	pubKey, ok := cert.PublicKey.(*ecdsa.PublicKey)
+	pubKey, ok := cert.PublicKey.(*sm2.PublicKey)
 	if !ok {
 		return errors.New("Public key is not ECDSA")
 	}
+	if pubKey.Verify(signEnc, cms.SignedData.SignerInfos[0].Signature) != true{
+		return errors.New(fmt.Sprintf("CMS encrypted digest  are different"))
+	}
 
-	decryptedHash, err := DecryptSignatureECDSA(cms.SignedData.SignerInfos[0].Signature, pubKey)
-	if err != nil {
-		return errors.New(fmt.Sprintf("CMS signature decoding error: %v", err))
-	}
-	if !bytes.Equal(signedAttributesHash, decryptedHash) {
-		return errors.New(fmt.Sprintf("CMS encrypted digest (%x) and calculated digest (%x) are different", decryptedHash, signedAttributesHash))
-	}
 
 	return nil
 }
+
+
+
+func (cms *CMS) SignSM(rand io.Reader, ski []byte, encap []byte, priv interface{}, cert []byte) error {
+	privKey, ok := priv.(*sm2.PrivateKey)
+	if !ok {
+		return errors.New("Private key is not sm2")
+	}
+
+	h := sm3.New()
+	h.Write(encap)
+	messageDigest := h.Sum(nil)
+	messageDigestEnc, err := asn1.Marshal(messageDigest)
+
+	digestAttribute := Attribute{
+		AttrType:  MessageDigest,
+		AttrValue: []asn1.RawValue{asn1.RawValue{FullBytes: messageDigestEnc}},
+	}
+	cms.SignedData.SignerInfos[0].SignedAttrs = append(cms.SignedData.SignerInfos[0].SignedAttrs, digestAttribute)
+
+	var sad SignedAttributesDigest
+	sad.SignedAttrs = cms.SignedData.SignerInfos[0].SignedAttrs
+	b, err := asn1.Marshal(sad)
+	if err != nil {
+		return err
+	}
+	h = sm3.New()
+	if len(b) < 2 {
+		return errors.New("Error with length of signed attributes")
+	}
+	h.Write(b[2:]) // removes the "sequence"
+	signedAttributesHash := h.Sum(nil)
+
+
+	signature, err := EncryptSignatureSM2(rand, signedAttributesHash, privKey)
+	if err != nil {
+		return err
+	}
+	cms.SignedData.SignerInfos[0].Signature = signature
+
+	skiM, err := asn1.MarshalWithParams(ski, "tag:0,optional")
+	if err != nil {
+		return err
+	}
+	cms.SignedData.SignerInfos[0].Sid = asn1.RawValue{FullBytes: skiM}
+
+	// Causes the byte slice to be encapsulated in a RawValue instead of an OctetString
+	var inner asn1.RawValue
+	_, err = asn1.Unmarshal(cert, &inner)
+	if err != nil {
+		return err
+	}
+	certM, err := asn1.MarshalWithParams([]asn1.RawValue{inner}, "tag:0,optional")
+	if err != nil {
+		return err
+	}
+	cms.SignedData.Certificates = asn1.RawValue{FullBytes: certM}
+	return nil
+}
+
+
+
+func EncryptSignatureSM2(rand io.Reader, signature []byte, privKey *sm2.PrivateKey) ([]byte, error) {
+	signDec := SignatureDecoded{
+		Inner: SignatureInner{
+			OID:  SM3OID,
+			Null: asn1.NullRawValue,
+		},
+		Hash: signature,
+	}
+	signEnc, err := asn1.Marshal(signDec)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Printf("TEST 1 %v\n", hex.EncodeToString(signEnc))
+
+	signatureM, err := privKey.Sign(rand, signEnc,nil)
+
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Printf("TEST 2 %v\n", hex.EncodeToString(signatureM))
+
+	//ok := privKey.Public().(*sm2.PublicKey).Verify(signEnc, signatureM)
+	//if ok == true{
+	//	fmt.Printf("verify success")
+	//}
+	//dec, err := DecryptSignatureRSA(signatureM, privKey.Public().(*rsa.PublicKey))
+	//fmt.Printf("TEST 2 %v %v\n", hex.EncodeToString(dec), err)
+
+	return signatureM, nil
+}
+
+
+//func DecryptSignatureSM2(signature []byte, pubKey *sm2.PublicKey, msg []byte) (error) {
+//
+//	if pubKey.Verify(msg, signature) ==
+//	dataDecrypted := SM2_public_decrypt(pubKey, signature)
+//	var signDec SignatureDecoded
+//	_, err := asn1.Unmarshal(dataDecrypted, &signDec)
+//	if err != nil {
+//		return nil, err
+//	}
+//	return signDec.Hash, nil
+//}
 

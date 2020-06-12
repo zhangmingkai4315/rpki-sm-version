@@ -106,7 +106,6 @@ func (v *Validator) AddCertWithSM(cert *librpki.RPKI_Certificate, trust bool) (b
 
 	if hasParent && parent != nil && valid {
 		parent.Childs = append(parent.Childs, res)
-
 		v.CertsSerial[aki+cert.SMCertificate.SerialNumber.String()] = res
 	}
 
@@ -237,6 +236,37 @@ func (v *Validator) ValidateCertificateWithSM(cert *librpki.RPKI_Certificate, tr
 	return nil
 }
 
+func (v *Validator) AddManifestWithSM(pkifile *PKIFile, mft *librpki.RPKI_Manifest) (bool, []*PKIFile, *Resource, error) {
+	pathCert := ExtractPathManifest(mft)
+
+	valid, _, res, err := v.AddCertWithSM(mft.Certificate, false)
+	if res == nil {
+		return valid, pathCert, res, errors.New(fmt.Sprintf("Resource is empty: %v", err))
+	}
+	res.File = pkifile
+	res.Type = TYPE_MFTCER
+
+	if !mft.InnerValid {
+		valid = false
+		err = errors.New(fmt.Sprintf("Manifest inner validity error: %v", mft.InnerValidityError))
+	}
+
+	res_mft := ObjectToResource(mft)
+	res_mft.Type = TYPE_MFT
+	res_mft.File = pkifile
+	res.Childs = append(res.Childs, res_mft)
+	res_mft.Parent = res
+	key := mft.Certificate.Certificate.SubjectKeyId
+	if valid {
+		v.ValidManifest[string(key)] = res_mft
+	}
+	v.Manifest[string(key)] = res_mft
+
+	return valid, pathCert, res_mft, err
+}
+
+
+
 func (v *Validator) AddResourceWithSM(pkifile *PKIFile, data []byte) (bool, []*PKIFile, *Resource, error) {
 	resType := pkifile.Type
 	switch resType {
@@ -309,7 +339,7 @@ func (v *Validator) AddResourceWithSM(pkifile *PKIFile, data []byte) (bool, []*P
 		if err != nil {
 			return false, nil, nil, err
 		}
-		valid, pathCert, res, err := v.AddManifest(pkifile, mft)
+		valid, pathCert, res, err := v.AddManifestWithSM(pkifile, mft)
 		if res == nil {
 			return valid, nil, res, errors.New(fmt.Sprintf("Resource is empty: %v", err))
 		}

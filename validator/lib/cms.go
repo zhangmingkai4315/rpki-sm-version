@@ -236,7 +236,6 @@ func (cms *CMS) Sign(rand io.Reader, ski []byte, encap []byte, priv interface{},
 	h.Write(b[2:]) // removes the "sequence"
 	signedAttributesHash := h.Sum(nil)
 
-	//signature, err := privKey.Sign(rand, signedAttributesHash, nil)
 	signature, err := EncryptSignatureRSA(rand, signedAttributesHash, privKey)
 	if err != nil {
 		return err

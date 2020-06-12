@@ -1,6 +1,7 @@
 package librpki
 
 import (
+	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"github.com/tjfoc/gmsm/sm2"
@@ -9,11 +10,18 @@ import (
 
 func DecodeCertificateWithSM(data []byte) (*RPKI_Certificate, error) {
 	cert, err := sm2.ParseCertificate(data)
-
 	if err != nil {
 		fmt.Print(err)
 		return nil, err
 	}
+	publicKey := cert.PublicKey.(*ecdsa.PublicKey)
+
+	pub := new(sm2.PublicKey)
+	pub.X = publicKey.X
+	pub.Y = publicKey.Y
+	pub.Curve = publicKey.Curve
+	cert.PublicKey = pub
+
 	rpki_cert := RPKI_Certificate{
 		SMCertificate: cert,
 	}
