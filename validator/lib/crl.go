@@ -22,8 +22,8 @@ type CRLAuthKeyId struct {
 
 // https://tools.ietf.org/html/rfc6487#section-5
 func CreateCRL(c *x509.Certificate, rand io.Reader, priv interface{},
-               revokedCerts []pkix.RevokedCertificate,
-               now, expiry time.Time, sn *big.Int) (crlBytes []byte, err error) {
+	revokedCerts []pkix.RevokedCertificate,
+	now, expiry time.Time, sn *big.Int) (crlBytes []byte, err error) {
 	key, ok := priv.(crypto.Signer)
 	if !ok {
 		return nil, errors.New("x509: certificate private key does not implement crypto.Signer")

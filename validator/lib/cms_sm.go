@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"encoding/asn1"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/tjfoc/gmsm/sm2"
@@ -14,37 +13,18 @@ import (
 	//"encoding/hex"
 )
 
-
 // SMOID标准定义
 // http://gmssl.org/docs/oid.html
 var (
 	// 1.2.156.10197.1.401 SM3
 	// 1.2.156.10197.1.401.2 HMAC-SM3
-	SM3OID      = asn1.ObjectIdentifier{1,2,156,10197,1,401}
+	SM3OID = asn1.ObjectIdentifier{1, 2, 156, 10197, 1, 401}
 
 	//1.2.156.10197.1.301.3 sm2encrypt
 	//1.2.156.10197.1.301.3.1 sm2encrypt-recommendedParameters
 	//1.2.156.10197.1.301.3.2 sm2encrypt-specifiedParameters
-	SM2OID      = asn1.ObjectIdentifier{1,2,156,10197,1,301,3}
+	SM2OID = asn1.ObjectIdentifier{1, 2, 156, 10197, 1, 301, 3}
 )
-
-
-//func DecryptSignatureSM(signature []byte, pubKey *sm2.PublicKey) ([]byte, error) {
-//	//dataDecrypted := ECDSA_public_decrypt(pubKey, signature)
-//
-//	//pubKey．
-//	dataDecrypted, err := sm2.Encrypt(pubKey, signature)
-//	if err != nil{
-//		return  nil, err
-//	}
-//	var signDec SignatureDecoded
-//	_, err = asn1.Unmarshal(dataDecrypted, &signDec)
-//	if err != nil {
-//		return nil, err
-//	}
-//	return signDec.Hash, nil
-//}
-
 
 // EncodeCMSWithSM　支持国密码算法的版本
 func EncodeCMSWithSM(certificate []byte, encapContent interface{}, signingTime time.Time) (*CMS, error) {
@@ -89,7 +69,6 @@ func EncodeCMSWithSM(certificate []byte, encapContent interface{}, signingTime t
 	if err != nil {
 		return nil, err
 	}
-
 
 	oidBytes, err := asn1.Marshal(SM3OID)
 	if err != nil {
@@ -172,7 +151,6 @@ func (cms *CMS) GetRPKICertificateWithSM() (*RPKI_Certificate, error) {
 	return rpki_cert, nil
 }
 
-
 func (cms *CMS) ValidateWithSM(encap []byte, cert *sm2.Certificate) error {
 	signedAttributes := cms.SignedData.SignerInfos[0].SignedAttrs
 
@@ -204,7 +182,6 @@ func (cms *CMS) ValidateWithSM(encap []byte, cert *sm2.Certificate) error {
 	h.Write(b[2:]) // removes the "sequence"
 	signedAttributesHash := h.Sum(nil)
 
-
 	signDec := SignatureDecoded{
 		Inner: SignatureInner{
 			OID:  SM3OID,
@@ -219,14 +196,12 @@ func (cms *CMS) ValidateWithSM(encap []byte, cert *sm2.Certificate) error {
 	if !ok {
 		return errors.New("Public key is not ECDSA")
 	}
-	if pubKey.Verify(signEnc, cms.SignedData.SignerInfos[0].Signature) != true{
+	if pubKey.Verify(signEnc, cms.SignedData.SignerInfos[0].Signature) != true {
 		return errors.New(fmt.Sprintf("CMS encrypted digest  are different"))
 	}
 
-
 	return nil
 }
-
 
 
 func (cms *CMS) SignSM(rand io.Reader, ski []byte, encap []byte, priv interface{}, cert []byte) error {
@@ -259,7 +234,6 @@ func (cms *CMS) SignSM(rand io.Reader, ski []byte, encap []byte, priv interface{
 	h.Write(b[2:]) // removes the "sequence"
 	signedAttributesHash := h.Sum(nil)
 
-
 	signature, err := EncryptSignatureSM2(rand, signedAttributesHash, privKey)
 	if err != nil {
 		return err
@@ -286,8 +260,6 @@ func (cms *CMS) SignSM(rand io.Reader, ski []byte, encap []byte, priv interface{
 	return nil
 }
 
-
-
 func EncryptSignatureSM2(rand io.Reader, signature []byte, privKey *sm2.PrivateKey) ([]byte, error) {
 	signDec := SignatureDecoded{
 		Inner: SignatureInner{
@@ -300,27 +272,15 @@ func EncryptSignatureSM2(rand io.Reader, signature []byte, privKey *sm2.PrivateK
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("TEST 1 %v\n", hex.EncodeToString(signEnc))
 
-	signatureM, err := privKey.Sign(rand, signEnc,nil)
+	signatureM, err := privKey.Sign(rand, signEnc, nil)
 
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Printf("TEST 2 %v\n", hex.EncodeToString(signatureM))
-
-	//ok := privKey.Public().(*sm2.PublicKey).Verify(signEnc, signatureM)
-	//if ok == true{
-	//	fmt.Printf("verify success")
-	//}
-	//dec, err := DecryptSignatureRSA(signatureM, privKey.Public().(*rsa.PublicKey))
-	//fmt.Printf("TEST 2 %v %v\n", hex.EncodeToString(dec), err)
-
 	return signatureM, nil
 }
-
-
 
 // Won't validate if signedattributes is empty
 func (cms *CMS) ValidateSM(encap []byte, cert *sm2.Certificate) error {
@@ -363,19 +323,22 @@ func (cms *CMS) ValidateSM(encap []byte, cert *sm2.Certificate) error {
 	}
 	signEnc, err := asn1.Marshal(signDec)
 
-	pubKey, ok := cert.PublicKey.(*ecdsa.PublicKey)
-	if !ok {
-		return errors.New("Public key is not ECDSA")
-	}
 
-	var p sm2.PublicKey
-	p.X = pubKey.X
-	p.Y = pubKey.Y
-	p.Curve = sm2.P256Sm2()
-
-	if p.Verify(signEnc, cms.SignedData.SignerInfos[0].Signature) != true{
+	if pubKey, ok := cert.PublicKey.(*ecdsa.PublicKey);ok {
+		var p sm2.PublicKey
+		p.X = pubKey.X
+		p.Y = pubKey.Y
+		p.Curve = sm2.P256Sm2()
+		if p.Verify(signEnc, cms.SignedData.SignerInfos[0].Signature) == true {
+			return  nil
+		}
 		return errors.New(fmt.Sprintf("CMS encrypted digest  are different"))
+	}else if sm2PubKey, ok := cert.PublicKey.(*sm2.PublicKey); ok{
+		if sm2PubKey.Verify(signEnc, cms.SignedData.SignerInfos[0].Signature) == true {
+			return  nil
+		}
+		return errors.New(fmt.Sprintf("CMS encrypted digest  are different"))
+	}else{
+		return errors.New("Public key is not SM2 or ECDSA")
 	}
-
-	return nil
 }

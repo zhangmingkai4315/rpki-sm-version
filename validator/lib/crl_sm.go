@@ -13,9 +13,8 @@ import (
 )
 
 var (
-	OidSignatureSM3WithSM2 = asn1.ObjectIdentifier{1,2,156,10197,1,501}
+	OidSignatureSM3WithSM2 = asn1.ObjectIdentifier{1, 2, 156, 10197, 1, 501}
 )
-
 
 // https://tools.ietf.org/html/rfc6487#section-5
 func CreateCRLWithSM(c *x509.Certificate, rand io.Reader, priv interface{},

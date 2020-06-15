@@ -429,7 +429,7 @@ type RPKI_Certificate struct {
 	ASNums                   []ASNCertificateInformation
 	ASNRDI                   []ASNCertificateInformation
 
-	Certificate *x509.Certificate
+	Certificate   *x509.Certificate
 	SMCertificate *sm2.Certificate
 
 	//SubjectKeyIdentifier []byte // Replace by certificate content

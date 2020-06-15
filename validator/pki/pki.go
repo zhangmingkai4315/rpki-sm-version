@@ -195,6 +195,7 @@ type PKIFile struct {
 	Type   int
 	Trust  bool
 }
+
 // 计算ＭＦＴ类型的路径
 func (f *PKIFile) ComputePath() string {
 	pathRep := f.Path
@@ -215,7 +216,6 @@ func ObjectToResource(data interface{}) *Resource {
 	}
 	return res
 }
-
 
 func (v *Validator) InvalidateObject(keyid []byte) {
 	invalidated := make(map[string]bool)
@@ -271,14 +271,13 @@ func (v *Validator) AddTAL(tal *librpki.RPKI_TAL) ([]*PKIFile, *Resource, error)
 func (v *Validator) AddCert(cert *librpki.RPKI_Certificate, trust bool) (bool, []*PKIFile, *Resource, error) {
 	pathCert := ExtractPathCert(cert)
 	var ski, aki string
-	if cert.SMCertificate == nil{
+	if cert.SMCertificate == nil {
 		ski = string(cert.Certificate.SubjectKeyId)
 		aki = string(cert.Certificate.AuthorityKeyId)
-	}else{
+	} else {
 		ski = string(cert.SMCertificate.SubjectKeyId)
 		aki = string(cert.SMCertificate.AuthorityKeyId)
 	}
-
 
 	_, exists := v.Objects[ski]
 	if exists {
@@ -401,7 +400,7 @@ func (v *Validator) ValidateCertificate(cert *librpki.RPKI_Certificate, trust bo
 func (v *Validator) AddROA(pkifile *PKIFile, roa *librpki.RPKI_ROA) (bool, *Resource, error) {
 
 	addCert := v.AddCertWithSM
-	if roa.Certificate.SMCertificate == nil{
+	if roa.Certificate.SMCertificate == nil {
 		addCert = v.AddCert
 	}
 	valid, _, res, err := addCert(roa.Certificate, false)
@@ -428,9 +427,9 @@ func (v *Validator) AddROA(pkifile *PKIFile, roa *librpki.RPKI_ROA) (bool, *Reso
 	res.Childs = append(res.Childs, res_roa)
 	res_roa.Parent = res
 	var key []byte
-	if roa.Certificate.SMCertificate == nil{
+	if roa.Certificate.SMCertificate == nil {
 		key = roa.Certificate.Certificate.SubjectKeyId
-	}else{
+	} else {
 		key = roa.Certificate.SMCertificate.SubjectKeyId
 	}
 	//key := roa.Certificate.Certificate.SubjectKeyId
@@ -511,9 +510,9 @@ func (v *Validator) AddCRL(crl *pkix.CertificateList) (bool, *Resource, error) {
 	}
 	if valid {
 		var err error
-		if parentCert.SMCertificate == nil{
+		if parentCert.SMCertificate == nil {
 			err = parentCert.Certificate.CheckCRLSignature(crl)
-		}else{
+		} else {
 			err = parentCert.SMCertificate.CheckCRLSignature(crl)
 		}
 
@@ -526,11 +525,11 @@ func (v *Validator) AddCRL(crl *pkix.CertificateList) (bool, *Resource, error) {
 				child, found := v.CertsSerial[key]
 				if found {
 					childConv := child.Resource.(*librpki.RPKI_Certificate)
-					if childConv.SMCertificate != nil{
+					if childConv.SMCertificate != nil {
 						if childConv.SMCertificate.SerialNumber.Cmp(revoked.SerialNumber) == 0 {
 							v.InvalidateObject(childConv.Certificate.SubjectKeyId)
 						}
-					}else{
+					} else {
 						if childConv.Certificate.SerialNumber.Cmp(revoked.SerialNumber) == 0 {
 							v.InvalidateObject(childConv.Certificate.SubjectKeyId)
 						}
@@ -588,7 +587,7 @@ func ExtractPathCert(cert *librpki.RPKI_Certificate) []*PKIFile {
 			item.Repo = repo
 		}
 	}
-	if cert.SMCertificate == nil{
+	if cert.SMCertificate == nil {
 		for _, crl := range cert.Certificate.CRLDistributionPoints {
 			item := &PKIFile{
 				Type: TYPE_CRL,
@@ -597,7 +596,7 @@ func ExtractPathCert(cert *librpki.RPKI_Certificate) []*PKIFile {
 			}
 			fileList = append(fileList, item)
 		}
-	}else{
+	} else {
 		for _, crl := range cert.SMCertificate.CRLDistributionPoints {
 			item := &PKIFile{
 				Type: TYPE_CRL,
@@ -607,7 +606,6 @@ func ExtractPathCert(cert *librpki.RPKI_Certificate) []*PKIFile {
 			fileList = append(fileList, item)
 		}
 	}
-
 
 	if add {
 		fileList = append(fileList, item)
@@ -703,8 +701,6 @@ func (sm *SimpleManager) Explore(notMFT bool, addInvalidChilds bool) int {
 	return count
 }
 
-
-
 func (v *Validator) AddResource(pkifile *PKIFile, data []byte) (bool, []*PKIFile, *Resource, error) {
 	resType := pkifile.Type
 	switch resType {
@@ -730,12 +726,12 @@ func (v *Validator) AddResource(pkifile *PKIFile, data []byte) (bool, []*PKIFile
 		if pkifile != nil && pkifile.Parent != nil && pkifile.Parent.Type == TYPE_TAL {
 			talComp, ok := v.TALs[pkifile.Path]
 			if ok {
-				if cert.SMCertificate == nil{
+				if cert.SMCertificate == nil {
 					talValidation := talComp.Resource.(*librpki.RPKI_TAL).CheckCertificate(cert.Certificate)
 					if !talValidation {
 						return false, nil, nil, errors.New("Certificate was not validated against TAL")
 					}
-				}else{
+				} else {
 					talValidation := talComp.Resource.(*librpki.RPKI_TAL).CheckCertificateWithSM(cert.SMCertificate)
 					if !talValidation {
 						return false, nil, nil, errors.New("Certificate was not validated against TAL")
@@ -746,9 +742,9 @@ func (v *Validator) AddResource(pkifile *PKIFile, data []byte) (bool, []*PKIFile
 		var valid bool
 		var pathCert []*PKIFile
 		var res *Resource
-		if cert.SMCertificate == nil{
+		if cert.SMCertificate == nil {
 			valid, pathCert, res, err = v.AddCert(cert, pkifile.Trust)
-		}else{
+		} else {
 			valid, pathCert, res, err = v.AddCertWithSM(cert, pkifile.Trust)
 		}
 

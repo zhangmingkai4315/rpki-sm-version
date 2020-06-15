@@ -8,8 +8,6 @@ import (
 	"github.com/cloudflare/cfrpki/validator/lib"
 )
 
-
-
 func (sm *SimpleManager) ExploreAddWithSM(file *PKIFile, data *SeekFile, addInvalidChilds bool) {
 	sm.Explored[file.ComputePath()] = true
 	valid, subFiles, res, err := sm.Validator.AddResourceWithSM(file, data.Data)
@@ -77,7 +75,6 @@ func (sm *SimpleManager) ExploreWithSM(notMFT bool, addInvalidChilds bool) int {
 	return count
 }
 
-
 func (v *Validator) AddCertWithSM(cert *librpki.RPKI_Certificate, trust bool) (bool, []*PKIFile, *Resource, error) {
 	pathCert := ExtractPathCertWithSM(cert)
 
@@ -117,7 +114,6 @@ func (v *Validator) AddCertWithSM(cert *librpki.RPKI_Certificate, trust bool) (b
 	return valid, pathCert, res, err
 }
 
-
 func ExtractPathCertWithSM(cert *librpki.RPKI_Certificate) []*PKIFile {
 	fileList := make([]*PKIFile, 0)
 
@@ -150,7 +146,6 @@ func ExtractPathCertWithSM(cert *librpki.RPKI_Certificate) []*PKIFile {
 	}
 	return fileList
 }
-
 
 func (v *Validator) ValidateCertificateWithSM(cert *librpki.RPKI_Certificate, trust bool) error {
 	ski := cert.SMCertificate.SubjectKeyId
@@ -265,8 +260,6 @@ func (v *Validator) AddManifestWithSM(pkifile *PKIFile, mft *librpki.RPKI_Manife
 	return valid, pathCert, res_mft, err
 }
 
-
-
 func (v *Validator) AddResourceWithSM(pkifile *PKIFile, data []byte) (bool, []*PKIFile, *Resource, error) {
 	resType := pkifile.Type
 	switch resType {
@@ -292,12 +285,12 @@ func (v *Validator) AddResourceWithSM(pkifile *PKIFile, data []byte) (bool, []*P
 		if pkifile != nil && pkifile.Parent != nil && pkifile.Parent.Type == TYPE_TAL {
 			talComp, ok := v.TALs[pkifile.Path]
 			if ok {
-				if cert.SMCertificate == nil{
+				if cert.SMCertificate == nil {
 					talValidation := talComp.Resource.(*librpki.RPKI_TAL).CheckCertificate(cert.Certificate)
 					if !talValidation {
 						return false, nil, nil, errors.New("Certificate was not validated against TAL")
 					}
-				}else{
+				} else {
 					talValidation := talComp.Resource.(*librpki.RPKI_TAL).CheckCertificateWithSM(cert.SMCertificate)
 					if !talValidation {
 						return false, nil, nil, errors.New("Certificate was not validated against TAL")
@@ -308,9 +301,9 @@ func (v *Validator) AddResourceWithSM(pkifile *PKIFile, data []byte) (bool, []*P
 		var valid bool
 		var pathCert []*PKIFile
 		var res *Resource
-		if cert.SMCertificate == nil{
+		if cert.SMCertificate == nil {
 			valid, pathCert, res, err = v.AddCert(cert, pkifile.Trust)
-		}else{
+		} else {
 			valid, pathCert, res, err = v.AddCertWithSM(cert, pkifile.Trust)
 		}
 
@@ -324,7 +317,7 @@ func (v *Validator) AddResourceWithSM(pkifile *PKIFile, data []byte) (bool, []*P
 		}
 		return valid, pathCert, res, err
 	case TYPE_ROA:
-		roa, err := librpki.DecodeROA(data)
+		roa, err := librpki.DecodeROAWithSM(data)
 		if err != nil {
 			return false, nil, nil, err
 		}

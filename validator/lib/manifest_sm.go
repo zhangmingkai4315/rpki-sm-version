@@ -1,8 +1,8 @@
 package librpki
+
 import (
 	"encoding/asn1"
 )
-
 
 func DecodeManifestWithSM(data []byte) (*RPKI_Manifest, error) {
 	c, err := DecodeCMS(data)
@@ -54,4 +54,3 @@ func DecodeManifestWithSM(data []byte) (*RPKI_Manifest, error) {
 
 	return rpki_manifest, nil
 }
-

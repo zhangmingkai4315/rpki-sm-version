@@ -8,18 +8,16 @@ import (
 	"math/big"
 )
 
-
 func (tal *RPKI_TAL) CheckCertificateWithSM(cert *sm2.Certificate) bool {
 	if tal.Algorithm == x509.ECDSA {
 		a := tal.PublicKey.(*sm2.PublicKey)
 		b := cert.PublicKey.(*sm2.PublicKey)
-		if a.X.Cmp(b.X) == 0 && a.Y.Cmp(b.Y) ==0{
-			return  true
+		if a.X.Cmp(b.X) == 0 && a.Y.Cmp(b.Y) == 0 {
+			return true
 		}
 	}
 	return false
 }
-
 
 func BundleSM2PublicKey(key *sm2.PublicKey) (asn1.BitString, error) {
 	keyBytes, err := sm2.MarshalSm2PublicKey(key)
@@ -28,7 +26,6 @@ func BundleSM2PublicKey(key *sm2.PublicKey) (asn1.BitString, error) {
 	}
 	return asn1.BitString{Bytes: keyBytes}, nil
 }
-
 
 //func HashSMPublicKey(key sm2.PublicKey)([]byte, error){
 //	keyBytesHash, err := asn1.Marshal(key)
@@ -42,8 +39,7 @@ func BundleSM2PublicKey(key *sm2.PublicKey) (asn1.BitString, error) {
 //	return hashResult[:], nil
 //}
 
-
-func HashSMPublicKey(key sm2.PublicKey)([]byte, error){
+func HashSMPublicKey(key sm2.PublicKey) ([]byte, error) {
 	//keyBytesHash, err := asn1.Marshal(key.X.Add(key.Y).Bytes())
 	//if err != nil {
 	//	return nil, err
@@ -55,4 +51,3 @@ func HashSMPublicKey(key sm2.PublicKey)([]byte, error){
 	hashResult := hash.Sum(nil)
 	return hashResult[:], nil
 }
-

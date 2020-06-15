@@ -159,8 +159,6 @@ func DecryptSignatureRSA(signature []byte, pubKey *rsa.PublicKey) ([]byte, error
 	return signDec.Hash, nil
 }
 
-
-
 func EncryptSignatureRSA(rand io.Reader, signature []byte, privKey *rsa.PrivateKey) ([]byte, error) {
 	signDec := SignatureDecoded{
 		Inner: SignatureInner{
@@ -173,7 +171,6 @@ func EncryptSignatureRSA(rand io.Reader, signature []byte, privKey *rsa.PrivateK
 	if err != nil {
 		return nil, err
 	}
-	//fmt.Printf("TEST 1 %v\n", hex.EncodeToString(signEnc))
 
 	signatureM, err := rsa.SignPKCS1v15(rand, privKey, crypto.Hash(0), signEnc)
 	//signatureM, err := PrivateEncrypt(privKey, signEnc)
@@ -342,12 +339,13 @@ func BadFormatGroup(data []byte) ([]byte, bool, error) {
 }
 
 func (cms *CMS) GetRPKICertificate() (*RPKI_Certificate, error) {
-	rpki_cert, err := DecodeCertificateSM(cms.SignedData.Certificates.Bytes)
+	rpki_cert, err := DecodeCertificate(cms.SignedData.Certificates.Bytes)
 	if err != nil {
 		return nil, err
 	}
 	return rpki_cert, nil
 }
+
 
 
 func (cms *CMS) GetSigningTime() (time.Time, error) {

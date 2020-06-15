@@ -71,7 +71,7 @@ func CreateTAL(uri string, pubkey interface{}) (*RPKI_TAL, error) {
 	default:
 		return nil, errors.New("Public key is not RSA or SM2")
 	}
-	if isSMAlgorithem == true{
+	if isSMAlgorithem == true {
 		return &RPKI_TAL{
 			URI:       uri,
 			Algorithm: x509.ECDSA,
@@ -131,7 +131,6 @@ type pkixPublicKey struct {
 	BitString asn1.BitString
 }
 
-
 func EncodeTALSize(tal *RPKI_TAL, split int) ([]byte, error) {
 	var bs asn1.BitString
 	var err error
@@ -141,12 +140,12 @@ func EncodeTALSize(tal *RPKI_TAL, split int) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-	}else if tal.OID.Equal(SM2OID){
+	} else if tal.OID.Equal(SM2OID) {
 		//var r pkixPublicKey
 		keyRaw := tal.PublicKey.(sm2.PublicKey)
 		//keyRaw := tal.PublicKey.(sm2.PublicKey)
 		bs, err = BundleSM2PublicKey(&keyRaw)
-		if err != nil{
+		if err != nil {
 			return nil, err
 		}
 
@@ -261,7 +260,7 @@ func DecodeTAL(data []byte) (*RPKI_TAL, error) {
 			return nil, err
 		}
 		tal.PublicKey = &inner2
-	}else if tal.OID.Equal(SM2OID) {
+	} else if tal.OID.Equal(SM2OID) {
 		tal.Algorithm = x509.ECDSA
 
 		//var inner2 sm2.PublicKey
