@@ -201,7 +201,6 @@ func TestPKI(t *testing.T) {
 	fs.AddFile("rsync://lambda/module/test.cer", certBytesOrg)
 
 	orghash := sha256.Sum256(certBytesOrg)
-
 	// CRL
 	crlBytes, err = librpki.CreateCRL(orgCert, rand.Reader, privkeySubCert, []pkix.RevokedCertificate{}, genTime, genTime.Add(validity), big.NewInt(1))
 	assert.Nil(t, err)

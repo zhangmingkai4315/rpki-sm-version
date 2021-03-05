@@ -4,13 +4,13 @@ import (
 	"testing"
 )
 
-func BenchmarkSignROACertification(b *testing.B) {
-	manager := NewTestManager()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		signROA(manager)
-	}
-}
+//func BenchmarkSignROACertification(b *testing.B) {
+//	manager := NewTestManager()
+//	b.ResetTimer()
+//	for i := 0; i < b.N; i++ {
+//		signROA(manager)
+//	}
+//}
 
 func TestValidateROACertification(t *testing.T) {
 	manager := NewTestManager()
@@ -23,14 +23,14 @@ func TestValidateROACertification(t *testing.T) {
 }
 
 
-func BenchmarkValidateROACertification(b *testing.B) {
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		b.StopTimer()
-		manager := NewTestManager()
-		roa, _ := signROA(manager)
-		addROAToManifest(manager, roa)
-		b.StartTimer()
-		validateROA(manager)
-	}
-}
+//func BenchmarkValidateROACertification(b *testing.B) {
+//	b.ResetTimer()
+//	for i := 0; i < b.N; i++ {
+//		b.StopTimer()
+//		manager := NewTestManager()
+//		roa, _ := signROA(manager)
+//		addROAToManifest(manager, roa)
+//		b.StartTimer()
+//		validateROA(manager)
+//	}
+//}

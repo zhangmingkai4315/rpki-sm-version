@@ -674,7 +674,6 @@ func (sm *SimpleManager) Explore(notMFT bool, addInvalidChilds bool) int {
 		}
 		if !notMFT || file.Type != TYPE_MFT {
 			data, err := sm.GetNextFile(file)
-
 			if err != nil {
 				if sm.Log != nil {
 					sm.Log.Errorf("Error exploring file: %v", err)

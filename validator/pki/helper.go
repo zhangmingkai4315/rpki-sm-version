@@ -108,9 +108,6 @@ func Validate(talPath string, fs FileSeeker) int {
 	for _, roa := range manager.Validator.ValidROA {
 		d := roa.Resource.(*librpki.RPKI_ROA)
 		count += len(d.Valids)
-		/* for _, entry := range d.Valids {
-		    fmt.Printf("Found ROA: AS%v %v-%v (%v)", d.ASN, entry.IPNet.String(), entry.MaxLength, manager.PathOfResource[roa].ComputePath())
-		}*/
 	}
 	return count
 }
